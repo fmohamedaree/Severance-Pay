@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Severance Pay Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<style>
+  :root {
+    --bg: #F2F4EF;
+    --surface: #FFFFFF;
+    --border: #DEE3D9;
+    --primary: #1F4D34;
+    --primary-dark2: #14331F;
+    --accent: #B08D3E;
+    --text: #1C231C;
+    --muted: #66715F;
+    --danger: #A6402F;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 80px;
+  }
+  .page { width: 100%; max-width: 620px; }
+  .eyebrow {
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    color: var(--primary-dark2);
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 14.5px;
+    margin: 0 0 32px;
+    max-width: 46ch;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  input[type=text], input[type=number] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14.5px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color .15s;
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+  button {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    border: none;
+    border-radius: 6px;
+    padding: 13px 20px;
+    cursor: pointer;
+    transition: background .15s, transform .05s;
+  }
+  button:active { transform: scale(0.99); }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+    width: 100%;
+  }
+  .btn-primary:hover { background: var(--primary-dark2); }
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-secondary {
+    background: transparent;
+    color: var(--primary-dark2);
+    border: 1px solid var(--border);
+    flex: 1;
+  }
+  .btn-secondary:hover { border-color: var(--primary); }
+  .btn-secondary:disabled {
+    color: #A9B0A4;
+    border-color: var(--border);
+    cursor: not-allowed;
+  }
+  .error {
+    color: var(--danger);
+    font-size: 13px;
+    margin-top: 6px;
+    display: none;
+  }
+  .error.show { display: block; }
+
+  /* Result panel */
+  #result-card { display: none; }
+  #result-card.show { display: block; }
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 18px;
+  }
+  .result-header .label {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .amount {
+    font-family: 'Fraunces', serif;
+    font-size: 42px;
+    font-weight: 500;
+    color: var(--primary-dark2);
+    margin: 0;
+    line-height: 1;
+  }
+  .amount .thb { font-size: 18px; color: var(--muted); margin-left: 6px; font-family: 'Inter', sans-serif; }
+  .line-items { border-top: 1px solid var(--border); padding-top: 16px; }
+  .line-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    font-size: 14px;
+  }
+  .line-item .k { color: var(--muted); }
+  .line-item .v { font-weight: 500; }
+  .not-eligible {
+    color: var(--danger);
+    font-size: 14.5px;
+    padding: 4px 0;
+  }
+
+  .footer-note {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 28px;
+    line-height: 1.6;
+  }
+
+  @media print {
+    body { padding: 0; background: white; }
+    .card:not(#result-card), .btn-row, .footer-note, h1 + .subtitle { display: none !important; }
+    #result-card { display: block !important; border: none; }
+  }
+
+  #pdf-view { display:none; }
+  .pdf-sheet { width: 1120px; margin: 0 auto; font-family: Arial, sans-serif; color:#000; }
+  .pdf-title { font-size: 20px; margin: 0 0 16px 4px; }
+  .pdf-main-table, .pdf-detail-table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  .pdf-main-table th { background:#A8D08D; border:1px solid #000; padding:7px 5px; font-weight:700; text-align:center; font-size:15px; }
+  .pdf-main-table th:nth-child(4) { background:#FFFF00; }
+  .pdf-main-table td { border:1px solid #000; padding:8px 5px; text-align:center; font-size:15px; height:38px; }
+  .pdf-main-table th:nth-child(1) { width:9%; } .pdf-main-table th:nth-child(2) { width:16%; } .pdf-main-table th:nth-child(3) { width:19%; } .pdf-main-table th:nth-child(4) { width:16%; }
+  .pdf-main-table th:nth-child(5) { width:19%; } .pdf-main-table th:nth-child(6) { width:13%; } .pdf-main-table th:nth-child(7) { width:12%; } .pdf-main-table th:nth-child(8) { width:14%; }
+  .pdf-detail-table { width:52%; margin-left:auto; margin-top:0; }
+  .pdf-detail-table td { border:1px solid #000; padding:6px 7px; font-size:14px; }
+  .pdf-detail-table td:last-child { text-align:right; }
+  .pdf-total td { background:#C084FC; font-weight:700; font-size:16px; }
+  @media print {
+    body { padding:0 !important; background:#fff !important; }
+    body > .page { display:none !important; }
+    #pdf-view { display:block !important; }
+    @page { size: A4 landscape; margin: 10mm; }
+  }
+
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">HR &amp; Payroll Tool</p>
+  <h1>Severance Pay Calculator</h1>
+  <p class="subtitle">Thai labour law service tiers, B.E. 2569 reference. Fill in the details below, calculate, then export a working Excel file or print a summary.</p>
+
+  <div class="card">
+    <p class="section-title">Company &amp; employee</p>
+    <div class="field">
+      <label for="company">Company name</label>
+      <input type="text" id="company" placeholder="e.g. Acme Thailand Co., Ltd.">
+    </div>
+    <div class="field">
+      <label for="employee">Employee name</label>
+      <input type="text" id="employee" placeholder="e.g. Ms. Somsri Jaidee">
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Employment dates</p>
+    <div class="row2">
+      <div class="field">
+        <label for="start-date">Start date</label>
+        <input type="text" id="start-date" placeholder="DD/MM/YYYY" value="01/01/2020">
+      </div>
+      <div class="field">
+        <label for="end-date">Last working day</label>
+        <input type="text" id="end-date" placeholder="DD/MM/YYYY" value="10/09/2026">
+      </div>
+    </div>
+    <p class="hint">Format: DD/MM/YYYY, e.g. 15/03/2020</p>
+    <p class="error" id="date-error">Please enter both dates as DD/MM/YYYY (e.g. 01/03/2020).</p>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Final salary rate</p>
+    <div class="field">
+      <label for="salary">Monthly salary (THB)</label>
+      <input type="number" id="salary" value="25000" min="0" step="0.01">
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="calculate()">Calculate</button>
+
+  <div class="card" id="result-card">
+    <div class="result-header">
+      <span class="label" id="result-title">Severance pay</span>
+    </div>
+    <div id="result-body"></div>
+    <div class="btn-row" id="export-row" style="display:none;">
+      <button class="btn-secondary" onclick="exportExcel()">📊 Export to Excel</button>
+      <button class="btn-secondary" onclick="exportPdf()">🖨️ Export PDF</button>
+    </div>
+  </div>
+
+  <p class="footer-note">
+    Excel export includes live formulas (duration, tier, total) that recalculate automatically when opened —
+    but as a plain, unstyled workbook rather than a designed template, since browser-based export can't carry
+    over custom fonts or colors. Use "Print / Save as PDF" instead for a formatted, presentation-ready copy.
+  </p>
+</div>
+
+<script>
+let lastResult = null;
+const TEMPLATE_BASE64 = "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";
+
+function parseDDMMYYYY(str) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str.trim());
+  if (!m) return null;
+  const day = parseInt(m[1], 10), month = parseInt(m[2], 10), year = parseInt(m[3], 10);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
+  return d;
+}
+
+function formatDDMMYYYY(date) {
+  const dd = String(date.getUTCDate()).padStart(2, '0');
+  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = date.getUTCFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function formatLongDate(date) {
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'long', year: 'numeric', timeZone:'UTC' }).format(date);
+}
+
+function fmtMoney(n) {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function durationParts(start, end) {
+  let years = end.getUTCFullYear() - start.getUTCFullYear();
+  let months = end.getUTCMonth() - start.getUTCMonth();
+  let days = end.getUTCDate() - start.getUTCDate();
+  if (days < 0) {
+    months--;
+    const prevMonth = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 0));
+    days += prevMonth.getUTCDate();
+  }
+  if (months < 0) { years--; months += 12; }
+  return { years, months, days, text: `${years} Years ${months} Months ${days} Days` };
+}
+
+function calculate() {
+  const errorEl = document.getElementById('date-error');
+  errorEl.classList.remove('show');
+
+  const company = document.getElementById('company').value.trim();
+  const employee = document.getElementById('employee').value.trim();
+  const startStr = document.getElementById('start-date').value;
+  const endStr = document.getElementById('end-date').value;
+  const salary = parseFloat(document.getElementById('salary').value);
+  const start = parseDDMMYYYY(startStr);
+  const end = parseDDMMYYYY(endStr);
+
+  if (!start || !end || isNaN(salary)) {
+    errorEl.classList.add('show');
+    document.getElementById('result-card').classList.remove('show');
+    return;
+  }
+  const totalDays = Math.round((end - start) / 86400000);
+  const resultCard = document.getElementById('result-card');
+  const resultBody = document.getElementById('result-body');
+  const resultTitle = document.getElementById('result-title');
+  const exportRow = document.getElementById('export-row');
+  resultCard.classList.add('show');
+
+  if (totalDays < 0) {
+    resultTitle.textContent = 'Invalid dates';
+    resultBody.innerHTML = `<p class="not-eligible">The last working day must be on or after the start date.</p>`;
+    exportRow.style.display = 'none';
+    lastResult = null;
+    return;
+  }
+
+  const duration = durationParts(start, end);
+  if (totalDays < 120) {
+    resultTitle.textContent = 'Not eligible';
+    resultBody.innerHTML = `<div class="line-item"><span class="k">Length of service</span><span class="v">${totalDays} days</span></div><p class="not-eligible">Not eligible for severance pay (less than 120 days of service).</p>`;
+    exportRow.style.display = 'none';
+    lastResult = null;
+    return;
+  }
+
+  const years = totalDays / 365.25;
+  let severanceDays, tier, severanceMonths;
+  if (years < 1) { severanceDays = 30; severanceMonths = 1; tier = '120 days – under 1 year'; }
+  else if (years < 3) { severanceDays = 90; severanceMonths = 3; tier = '1 year – under 3 years'; }
+  else if (years < 6) { severanceDays = 180; severanceMonths = 6; tier = '3 years – under 6 years'; }
+  else if (years < 10) { severanceDays = 240; severanceMonths = 8; tier = '6 years – under 10 years'; }
+  else if (years < 20) { severanceDays = 300; severanceMonths = 10; tier = '10 years – under 20 years'; }
+  else { severanceDays = 400; severanceMonths = 13.3333333333; tier = '20 years or more'; }
+
+  const dailyWage = salary / 30;
+  const severancePay = dailyWage * severanceDays;
+  const pensionOneMonth = salary * 0.03;
+  const pensionThreeMonths = pensionOneMonth * 3;
+  const grandTotal = severancePay + salary + salary + pensionOneMonth + pensionThreeMonths;
+
+  resultTitle.textContent = 'Severance pay';
+  resultBody.innerHTML = `
+    <p class="amount">${fmtMoney(severancePay)}<span class="thb">THB</span></p>
+    <div class="line-items">
+      <div class="line-item"><span class="k">Length of service</span><span class="v">${totalDays} days (~${years.toFixed(2)} yrs)</span></div>
+      <div class="line-item"><span class="k">Service tier</span><span class="v">${tier}</span></div>
+      <div class="line-item"><span class="k">Severance entitlement</span><span class="v">${severanceDays} days (${severanceMonths % 1 ? severanceMonths.toFixed(2) : severanceMonths} months)</span></div>
+      <div class="line-item"><span class="k">Daily wage</span><span class="v">${fmtMoney(dailyWage)} THB</span></div>
+      <div class="line-item"><span class="k">Employee</span><span class="v">${employee || '—'}</span></div>
+      <div class="line-item"><span class="k">Company</span><span class="v">${company || '—'}</span></div>
+    </div>`;
+  exportRow.style.display = 'flex';
+  lastResult = { company, employee, start, end, salary, eligible:true, totalDays, severanceDays, severancePay, tier, durationText:duration.text, pensionOneMonth, pensionThreeMonths, grandTotal };
+  preparePdfView();
+}
+
+function base64ToArrayBuffer(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function getTemplateWorkbook() {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(base64ToArrayBuffer(TEMPLATE_BASE64));
+  return wb;
+}
+
+function setExcelCell(cell, value) {
+  cell.value = value;
+}
+
+async function exportExcel() {
+  if (!lastResult || !lastResult.eligible) { alert('Calculate an eligible result first.'); return; }
+  if (!lastResult.company || !lastResult.employee) { alert('Please enter both the company name and the employee name before exporting.'); return; }
+  try {
+    const wb = await getTemplateWorkbook();
+    const ws = wb.getWorksheet('Sheet1');
+    const r = lastResult;
+
+    setExcelCell(ws.getCell('A1'), `Severance Pay on ${formatLongDate(r.end)}: ${r.employee}`);
+    setExcelCell(ws.getCell('A4'), r.company);
+    setExcelCell(ws.getCell('B4'), r.employee);
+    setExcelCell(ws.getCell('C4'), r.start);
+    setExcelCell(ws.getCell('D4'), r.end);
+    setExcelCell(ws.getCell('E4'), r.durationText);
+    setExcelCell(ws.getCell('F4'), r.salary);
+    setExcelCell(ws.getCell('G4'), `${r.severanceDays/30} Month${r.severanceDays/30 === 1 ? '' : 's'}`);
+    setExcelCell(ws.getCell('H4'), Number(r.severancePay.toFixed(2)));
+    setExcelCell(ws.getCell('H5'), Number(r.salary.toFixed(2)));
+    setExcelCell(ws.getCell('H6'), Number(r.salary.toFixed(2)));
+    setExcelCell(ws.getCell('H7'), Number(r.pensionOneMonth.toFixed(2)));
+    setExcelCell(ws.getCell('H8'), Number(r.pensionThreeMonths.toFixed(2)));
+    ws.getCell('H9').value = { formula: 'ROUND(SUM(H4:H8),2)' };
+    ws.getCell('C4').numFmt = 'dd-mmm-yy';
+    ws.getCell('D4').numFmt = 'dd-mmm-yy';
+    ws.getCell('F4').numFmt = '#,##0.00';
+    ['H4','H5','H6','H7','H8','H9'].forEach(a => ws.getCell(a).numFmt = '#,##0.00');
+
+    // Keep the workbook print area / page setup from the supplied template.
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Severance Pay - ${r.employee}.xlsx`.replace(/[\\/:*?"<>|]/g, '-');
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    alert('Excel export failed. Please check that ExcelJS is available and try again.');
+  }
+}
+
+function preparePdfView() {
+  if (!lastResult) return;
+  const r = lastResult;
+  document.getElementById('pdf-title').textContent = `Severance Pay on ${formatLongDate(r.end)}: ${r.employee}`;
+  document.getElementById('pdf-company').textContent = r.company;
+  document.getElementById('pdf-employee').textContent = r.employee;
+  document.getElementById('pdf-start').textContent = formatLongDate(r.start).replace(/(\d{2}) (\w+) (\d{4})/, '$1-$2'.slice(0));
+  document.getElementById('pdf-start').textContent = r.start.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'}).replace(/ /g,'-');
+  document.getElementById('pdf-end').textContent = r.end.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'}).replace(/ /g,'-');
+  document.getElementById('pdf-duration').textContent = r.durationText;
+  document.getElementById('pdf-salary').textContent = fmtMoney(r.salary);
+  document.getElementById('pdf-severance').textContent = `${r.severanceDays/30} Month${r.severanceDays/30 === 1 ? '' : 's'}`;
+  document.getElementById('pdf-sev-total').textContent = fmtMoney(r.severancePay);
+  document.getElementById('pdf-h5').textContent = fmtMoney(r.salary);
+  document.getElementById('pdf-h6').textContent = fmtMoney(r.salary);
+  document.getElementById('pdf-h7').textContent = fmtMoney(r.pensionOneMonth);
+  document.getElementById('pdf-h8').textContent = fmtMoney(r.pensionThreeMonths);
+  document.getElementById('pdf-h9').textContent = fmtMoney(r.grandTotal);
+}
+
+function exportPdf() {
+  if (!lastResult || !lastResult.eligible) { alert('Calculate an eligible result first.'); return; }
+  preparePdfView();
+  window.print();
+}
+</script>
+</body>
+</html>
